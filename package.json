@@ -10,8 +10,7 @@
         "start": "parcel src/public/index.html",
         "watch": "parcel watch src/public/index.html",
         "build": "parcel build src/public/index.html --public-url ./",
-        "format": "prettier --write .",
-        "clean": "rm -rf dist .cache/"
+        "format": "prettier --write ."
     },
     "husky": {
         "hooks": {
