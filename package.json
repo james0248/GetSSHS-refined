@@ -11,8 +11,7 @@
         "watch": "parcel watch src/public/index.html",
         "build": "parcel build src/public/index.html --public-url ./",
         "format": "prettier --write .",
-        "clean": "rm -rf dist .cache/",
-        "deploy": "gh-pages -d dist"
+        "clean": "rm -rf dist .cache/"
     },
     "husky": {
         "hooks": {

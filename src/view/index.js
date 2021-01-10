@@ -1,5 +1,5 @@
 import 'regenerator-runtime/runtime'
-import React, { Component } from 'react'
+import React, { useState, Component } from 'react'
 import ReactDOM from 'react-dom'
 import Grid from './components/Grid'
 import LeaderBoard from './components/LeaderBoard'
@@ -14,6 +14,17 @@ const preload = () => {
 
 window.onload = preload
 
+/*
+const App = props => {
+    let highestScore = window.localStorage.getItem('highestScore')
+    const [currentScore, setCurrentScore] = useState(0)
+    const [highestScore, setHighestScore] = useState(typeof highestScore !== 'string' ? 0 : highestScore)
+    window.localStorage.setItem('highestScore', highestScore.toString())
+    this.scoreHandler = this.scoreHandler.bind(this)
+
+
+}
+*/
 class App extends Component {
     constructor(props) {
         super(props)

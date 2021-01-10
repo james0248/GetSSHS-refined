@@ -1,31 +1,21 @@
-import React, { Component } from 'react'
+import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 
-class TextInput extends Component {
-    constructor(props) {
-        super(props)
-        this.state = {
-            focussed: props.focussed,
-            error: props.error || '',
-        }
-    }
+const TextInput = (props) => {
+    const { id, value, label } = props
+    const fieldValue = `field ${value && 'focussed'}`
 
-    render() {
-        const { focussed } = this.state
-        const { id, value, label } = this.props
-        const fieldValue = `field ${(focussed || value) && 'focussed'}`
-        return (
-            <div className={fieldValue}>
-                <input
-                    id={id}
-                    type="text"
-                    value={value}
-                    placeholder={label}
-                    onChange={this.props.onChange}
-                />
-            </div>
-        )
-    }
+    return (
+        <div className={fieldValue}>
+            <input
+                id={id}
+                type="text"
+                value={value}
+                placeholder={label}
+                onChange={props.onChange}
+            />
+        </div>
+    )
 }
 
 TextInput.propTypes = {
