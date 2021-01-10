@@ -1,4 +1,4 @@
-# GetSHHS!
+# GetSSHS!
 
 ## Motivations
 
