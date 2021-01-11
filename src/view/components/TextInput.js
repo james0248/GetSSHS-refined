@@ -3,10 +3,8 @@ import PropTypes from 'prop-types'
 
 const TextInput = (props) => {
     const { id, value, label } = props
-    const fieldValue = `field ${value && 'focussed'}`
-
     return (
-        <div className={fieldValue}>
+        <div className="field">
             <input
                 id={id}
                 type="text"

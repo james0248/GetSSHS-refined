@@ -1,68 +1,65 @@
-import React, { Component, createRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { gsap, TimelineMax } from 'gsap'
 import Tile from './Tile'
 import Cover from './Cover'
 import GameManager from '../../game/game-manager'
 
-const game = new GameManager(4),
-    keyMap = {
-        38: 0, // Up
-        87: 0, // W
-        37: 1, // Left
-        65: 1, // A
-        40: 2, // Down
-        83: 2, // S
-        39: 3, // Right
-        68: 3, // D
-    }
+const game = new GameManager(4)
+const keyMap = {
+    38: 0, // Up
+    87: 0, // W
+    37: 1, // Left
+    65: 1, // A
+    40: 2, // Down
+    83: 2, // S
+    39: 3, // Right
+    68: 3, // D
+}
 
 let imageSize = 0
 let tileGap = 0
 let touchStartClientX = 0
 let touchStartClientY = 0
 
-class Grid extends Component {
-    constructor(props) {
-        super(props)
-        this.state = {
-            board: game.board.board,
-            moveable: true,
-            inputSeq: '',
-            tileSeq: [game.startTile[0], game.startTile[1]],
-            success: 0,
-            image: true,
-        }
-        this.gridRef = createRef()
-        this.tileRef = []
-        this.handleMove = this.handleMove.bind(this)
-        this.handleRetry = this.handleRetry.bind(this)
-        this.handleSubmit = this.handleSubmit.bind(this)
-        this.handleKey = this.handleKey.bind(this)
-        this.handleTouchEnd = this.handleTouchEnd.bind(this)
-    }
+const Grid = (props) => {
+    const [status, setStatus] = useState({
+        board: game.board.board,
+        moveable: true,
+        inputSeq: '',
+        tileSeq: [game.startTile[0], game.startTile[1]],
+    })
+    const [success, setSuccess] = useState(0)
+    const [useImage, setUseImage] = useState(true)
+    const [result, setResult] = useState({ moved: false })
+    const gridRef = useRef()
+    let tileRef = []
 
-    componentDidMount() {
-        imageSize = gsap.getProperty('.tile', 'width')
-        tileGap = gsap.getProperty('.tile', 'margin-right')
-        document.addEventListener('keydown', this.handleKey)
-        this.gridRef.current.addEventListener(
-            'touchstart',
-            this.handleTouchStart
-        )
-        this.gridRef.current.addEventListener('touchmove', (e) => {
+    const addEventListeners = () => {
+        document.addEventListener('keydown', handleKey)
+        gridRef.current.addEventListener('touchstart', handleTouchStart)
+        gridRef.current.addEventListener('touchmove', (e) => {
             e.preventDefault()
         })
-        this.gridRef.current.addEventListener('touchend', this.handleTouchEnd)
+        gridRef.current.addEventListener('touchend', handleTouchEnd)
     }
 
-    handleTouchStart(event) {
+    const removeEventListeners = () => {
+        document.removeEventListener('keydown', handleKey)
+        gridRef.current.removeEventListener('touchstart', handleTouchStart)
+        gridRef.current.removeEventListener('touchmove', (e) => {
+            e.preventDefault()
+        })
+        gridRef.current.removeEventListener('touchend', handleTouchEnd)
+    }
+
+    const handleTouchStart = (event) => {
         if (event.touches.length > 1) return
         touchStartClientX = event.touches[0].clientX
         touchStartClientY = event.touches[0].clientY
         event.preventDefault()
     }
 
-    handleTouchEnd(event) {
+    const handleTouchEnd = (event) => {
         if (event.touches.length > 0) return
         let dx = event.changedTouches[0].clientX - touchStartClientX
         let absDx = Math.abs(dx)
@@ -71,125 +68,52 @@ class Grid extends Component {
         if (Math.max(absDx, absDy) > 40) {
             // (right : left) : (down : up)
             let move = absDx > absDy ? (dx > 0 ? 3 : 1) : dy > 0 ? 2 : 0
-            this.handleMove(move)
+            setResult(game.listen(move))
         }
     }
 
-    handleKey(event) {
+    const handleKey = (event) => {
         let mapped = keyMap[event.keyCode]
         if (mapped !== undefined) {
-            this.handleMove(mapped)
+            setResult(game.listen(mapped))
             event.preventDefault()
         }
     }
 
-    handleMove(mapped) {
-        let result = game.listen(mapped)
-        if (result.moved) {
-            let animation = new TimelineMax({ paused: true })
-            animation.eventCallback(
-                'onComplete',
-                (result) => {
-                    this.props.scoreHandler(game.score)
-                    if (!result.isMoveable) {
-                        document.removeEventListener('keydown', this.handleKey)
-                        this.gridRef.current.removeEventListener(
-                            'touchstart',
-                            this.handleTouchStart
-                        )
-                        this.gridRef.current.removeEventListener(
-                            'touchmove',
-                            (e) => {
-                                e.preventDefault()
-                            }
-                        )
-                        this.gridRef.current.removeEventListener(
-                            'touchend',
-                            this.handleTouchEnd
-                        )
-                    }
-                    this.setState((prevState) => {
-                        prevState.tileSeq.push(result.newTile)
-                        return {
-                            board: game.board.board,
-                            moveable: result.isMoveable,
-                            inputSeq:
-                                prevState.inputSeq +
-                                result.direction.toString(),
-                            tileSeq: prevState.tileSeq,
-                        }
-                    })
-                },
-                [result]
-            )
-            this.tileRef.forEach((ref, index) => {
-                let dx = result.moveVector[index].x * (imageSize + tileGap)
-                let dy = result.moveVector[index].y * (imageSize + tileGap)
-                if (dx !== 0 || dy !== 0) {
-                    animation.to(
-                        ref.ref.current,
-                        {
-                            x: dx,
-                            y: dy,
-                            duration: 0.1,
-                            clearProps: 'transform',
-                        },
-                        0
-                    )
-                }
-            })
-            animation.play()
-        }
-    }
-
-    handleRetry() {
+    const handleRetry = () => {
         game.reset()
-        this.setState({
+        setStatus({
             board: game.board.board,
             moveable: true,
             inputSeq: '',
             tileSeq: [game.startTile[0], game.startTile[1]],
-            success: 0,
-            image: true,
         })
-        document.addEventListener('keydown', this.handleKey)
-        this.gridRef.current.addEventListener(
-            'touchstart',
-            this.handleTouchStart
-        )
-        this.gridRef.current.addEventListener('touchmove', (e) => {
-            e.preventDefault()
-        })
-        this.gridRef.current.addEventListener('touchend', this.handleTouchEnd)
-        this.props.scoreHandler(game.score)
-        this.tileRef = []
+        setSuccess(0)
+        setUseImage(useImage)
+        addEventListeners()
+        props.scoreHandler(game.score)
     }
 
-    async handleSubmit(name) {
-        const response = await fetch(
-            'https://getsshs-backend.herokuapp.com/check',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: name,
-                    inputSeq: this.state.inputSeq,
-                    tileSeq: this.state.tileSeq,
-                    score: game.score,
-                }),
-            }
-        )
+    const handleSubmit = async (name) => {
+        const response = await fetch('http://localhost:8000/check', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                inputSeq: status.inputSeq,
+                tileSeq: status.tileSeq,
+                score: game.score,
+            }),
+        })
         game.clearBoardTags()
         if (response.ok) {
             window.localStorage.setItem('name', name)
-            this.setState({ success: 1 })
+            setSuccess(1)
         } else {
-            this.setState({ success: -1 })
-            if (response.status === 406) {
-                alert('이벤트 기간이 아닙니다')
-            } else if (response.status === 400) {
+            setSuccess(-1)
+            if (response.status === 400) {
                 alert(
                     '점수 집계 중 문제가 발생하였습니다. 관리자에게 스크린샷과 함께 제보하세요'
                 )
@@ -197,74 +121,88 @@ class Grid extends Component {
         }
     }
 
-    componentWillUnmount() {
-        document.removeEventListener('keydown', this.handleKey)
-        this.gridRef.current.removeEventListener(
-            'touchstart',
-            this.handleTouchStart
-        )
-        this.gridRef.current.removeEventListener('touchmove', (e) => {
-            e.preventDefault()
-        })
-        this.gridRef.current.removeEventListener(
-            'touchend',
-            this.handleTouchEnd
-        )
-    }
+    useEffect(() => {
+        imageSize = gsap.getProperty('.tile', 'width')
+        tileGap = gsap.getProperty('.tile', 'margin-right')
+        addEventListeners()
+        return removeEventListeners
+    }, [])
 
-    render() {
-        let board = this.state.board.map((row, x) => {
-            let tileRow = row.map((tile, y) => {
-                return (
-                    <Tile
-                        key={4 * x + y}
-                        ref={(tile) => {
-                            this.tileRef[4 * x + y] = tile
-                        }}
-                        tile={tile}
-                        image={this.state.image}
-                    />
+    useEffect(() => {
+        if (result.moved) {
+            let animation = new TimelineMax({ paused: true })
+            animation.eventCallback('onComplete', () => {
+                props.scoreHandler(game.score)
+                if (!result.isMoveable) {
+                    removeEventListeners()
+                }
+                setStatus((prevState) => ({
+                    board: game.board.board,
+                    moveable: result.isMoveable,
+                    inputSeq: prevState.inputSeq + result.direction.toString(),
+                    tileSeq: [...prevState.tileSeq, result.newTile],
+                }))
+            })
+            tileRef.forEach((ref, index) => {
+                let dx = result.moveVector[index].x * (imageSize + tileGap)
+                let dy = result.moveVector[index].y * (imageSize + tileGap)
+                animation.to(
+                    ref.current,
+                    {
+                        x: dx,
+                        y: dy,
+                        duration: 0.1,
+                        clearProps: 'transform',
+                    },
+                    0
                 )
             })
+            animation.play()
+        }
+    }, [result])
+
+    let board = status.board.map((row, x) => {
+        let tileRow = row.map((tile, y) => {
+            tileRef[4 * x + y] = useRef()
             return (
-                <div key={`grid-row-${x}`} className="grid-row">
-                    {tileRow}
-                </div>
+                <Tile
+                    key={4 * x + y}
+                    tile={tile}
+                    useImage={useImage}
+                    forwardRef={tileRef[4 * x + y]}
+                />
             )
         })
-
         return (
-            <div>
-                <input
-                    id="image"
-                    type="checkbox"
-                    checked={this.state.image}
-                    onChange={() => {
-                        this.setState((prevState) => {
-                            return { image: !prevState.image }
-                        })
-                    }}
-                />
-                <label for="image">Play with School Icons</label>
-                <div
-                    ref={this.gridRef}
-                    className="grid-container"
-                    align="center"
-                >
-                    <Cover
-                        display={!this.state.moveable}
-                        success={this.state.success}
-                        handleRetry={this.handleRetry}
-                        handleSubmit={(name) => {
-                            this.handleSubmit(name)
-                        }}
-                        score={game.score}
-                    />
-                    {board}
-                </div>
+            <div key={`grid-row-${x}`} className="grid-row">
+                {tileRow}
             </div>
         )
-    }
+    })
+
+    return (
+        <div>
+            <input
+                id="image"
+                type="checkbox"
+                checked={useImage}
+                onChange={() => {
+                    setUseImage(!useImage)
+                }}
+            />
+            <label htmlFor="image">Play with School Icons</label>
+            <div ref={gridRef} className="grid-container" align="center">
+                <Cover
+                    display={!status.moveable}
+                    success={success}
+                    handleRetry={handleRetry}
+                    handleSubmit={handleSubmit}
+                    score={game.score}
+                />
+                {board}
+            </div>
+        </div>
+    )
 }
 
 export default Grid
